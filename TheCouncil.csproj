@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>The Council</Product>
+    <Authors>Ilya Fainberg</Authors>
+    <Company>Ilya Fainberg</Company>
+    <Description>A Teams-style chat where multiple LLMs (and you) debate a problem until they agree on the best solution.</Description>
+    <Copyright>Copyright (c) 2026 Ilya Fainberg</Copyright>
+    <RepositoryUrl>https://github.com/ilyafainberg/the-council</RepositoryUrl>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

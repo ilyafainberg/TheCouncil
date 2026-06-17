@@ -1,0 +1,29 @@
+# .gitignore — Windows desktop (.NET) project.
+
+# Build output
+[Bb]in/
+[Oo]bj/
+publish/
+dist/
+Output/          # Inno Setup default output dir
+*.user
+
+# Inno Setup compiled installers (built by CI, never committed)
+*.exe
+*.msi
+
+# IDE / tooling
+.vs/
+.idea/
+*.suo
+*.userprefs
+
+# Local secrets / config — NEVER commit these
+*.env
+appsettings.*.local.json
+secrets.json
+*.pfx           # code-signing certs stay OFF the repo
+
+# Logs & temp
+*.log
+*.tmp

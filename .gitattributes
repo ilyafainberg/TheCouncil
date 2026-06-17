@@ -1,0 +1,20 @@
+# Normalize line endings so Windows/CRLF churn never pollutes diffs.
+* text=auto
+
+# Force LF for shell scripts and YAML.
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Force CRLF for Windows-specific scripts.
+*.ps1  text eol=crlf
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+
+# Treat these as binary (no diff, no EOL conversion).
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.zip  binary
+*.exe  binary
+*.iss  text eol=crlf

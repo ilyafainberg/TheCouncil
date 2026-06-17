@@ -1,0 +1,125 @@
+# =============================================================================
+#  release.yml — GitHub Actions release pipeline for The Council (Windows app).
+#
+#  On a pushed tag like `v1.0.0` this:
+#    1. Builds the app self-contained for win-x64.
+#    2. Produces a PORTABLE artifact  : TheCouncil-<ver>-portable-win-x64.zip
+#    3. Builds an Inno Setup installer and ZIPS it: TheCouncil-<ver>-setup.zip
+#    4. Generates SHA256SUMS.txt for both zips.
+#    5. Creates a GitHub Release and attaches all of the above.
+#
+#  Usage:  git tag v1.0.0 ; git push origin main --tags
+# =============================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write          # required so the workflow can create a Release.
+
+env:
+  APP_NAME: "TheCouncil"
+  PROJECT_PATH: "TheCouncil.csproj"
+  DOTNET_VERSION: "10.0.x"
+  RUNTIME_ID: "win-x64"
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Check out the exact tagged commit.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Derive the version from the tag.  v1.0.0 -> 1.0.0 (0.0.0 for manual runs)
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $ref = "${{ github.ref_name }}"
+          if ($ref -match '^v(.+)$') { $v = $Matches[1] } else { $v = '0.0.0' }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Building version $v"
+
+      # 3. Set up the .NET SDK (preview channel because the project targets .NET 10).
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
+
+      # 4. Publish self-contained so the Portable build runs on a clean PC.
+      - name: Publish (self-contained, ${{ env.RUNTIME_ID }})
+        shell: pwsh
+        run: |
+          dotnet publish "$env:PROJECT_PATH" `
+            -c Release `
+            -r $env:RUNTIME_ID `
+            --self-contained true `
+            -p:Version=${{ steps.ver.outputs.version }} `
+            -p:PublishSingleFile=false `
+            -o publish
+
+      # 5. PORTABLE artifact: zip the whole publish folder.
+      - name: Create Portable zip
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $zip = "dist/$($env:APP_NAME)-$v-portable-win-x64.zip"
+          Compress-Archive -Path publish/* -DestinationPath $zip -Force
+          Write-Host "Wrote $zip"
+
+      # 6. Install Inno Setup on the runner (choco is preinstalled).
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      # 7. Compile the installer -> Output/TheCouncil-<ver>-setup.exe
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc installer/setup.iss `
+            /DMyAppVersion=$v `
+            /DMyAppName=$env:APP_NAME `
+            /DPublishDir=publish
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+
+      # 8. SETUP artifact: zip the installer exe.
+      - name: Create Setup zip
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $exe = "Output/$($env:APP_NAME)-$v-setup.exe"
+          if (-not (Test-Path $exe)) { throw "Installer not found at $exe" }
+          $zip = "dist/$($env:APP_NAME)-$v-setup.zip"
+          Compress-Archive -Path $exe -DestinationPath $zip -Force
+          Write-Host "Wrote $zip"
+
+      # 9. Checksums for provenance.
+      - name: Generate SHA256SUMS
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/*.zip | ForEach-Object {
+            $h = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+            "$h  $($_.Name)"
+          } | Out-File -Encoding ascii dist/SHA256SUMS.txt
+          Get-Content dist/SHA256SUMS.txt
+
+      # 10. Create the GitHub Release and attach every dist/ asset.
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ env.APP_NAME }} ${{ github.ref_name }}"
+          generate_release_notes: true
+          files: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
