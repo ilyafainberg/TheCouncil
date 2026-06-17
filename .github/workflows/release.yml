@@ -82,23 +82,26 @@ jobs:
         run: choco install innosetup --no-progress -y
 
       # 7. Compile the installer -> Output/TheCouncil-<ver>-setup.exe
+      #    Pass an ABSOLUTE publish path: Inno resolves relative [Files] Source
+      #    paths against the .iss location (installer/), not the repo root.
       - name: Build installer (Inno Setup)
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
+          $publish = (Resolve-Path publish).Path
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           & $iscc installer/setup.iss `
             /DMyAppVersion=$v `
             /DMyAppName=$env:APP_NAME `
-            /DPublishDir=publish
+            /DPublishDir=$publish
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
 
-      # 8. SETUP artifact: zip the installer exe.
+      # 8. SETUP artifact: zip the installer exe (Inno writes to installer/Output).
       - name: Create Setup zip
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
-          $exe = "Output/$($env:APP_NAME)-$v-setup.exe"
+          $exe = "installer/Output/$($env:APP_NAME)-$v-setup.exe"
           if (-not (Test-Path $exe)) { throw "Installer not found at $exe" }
           $zip = "dist/$($env:APP_NAME)-$v-setup.zip"
           Compress-Archive -Path $exe -DestinationPath $zip -Force
