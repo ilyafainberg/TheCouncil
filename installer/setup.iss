@@ -65,3 +65,17 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+; The marker is written by [Code] below, so remove it on uninstall.
+Type: files; Name: "{app}\installed.marker"
+
+[Code]
+// Drop an "installed.marker" next to the app so the auto-updater knows this is an
+// installer build (and should fetch the *-setup.zip, not the portable zip).
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    SaveStringToFile(ExpandConstant('{app}\installed.marker'), 'installer', False);
+end;
+

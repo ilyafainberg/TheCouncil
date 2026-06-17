@@ -15,9 +15,11 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using TheCouncil.Core;
 using TheCouncil.Models;
+using TheCouncil.Updating;
 
 namespace TheCouncil.UI;
 
@@ -48,7 +50,61 @@ public partial class MainForm : Form
         InitCouncil();
         RefreshRoster();
         ShowWelcome();
+        Shown += MainForm_Shown;
     }
+
+    // ---------------- Auto-update ----------------
+    private bool updateChecked;
+
+    private async void MainForm_Shown(object? sender, EventArgs e)
+    {
+        if (updateChecked) return;
+        updateChecked = true;
+        await CheckForUpdatesAsync(silentIfNone: true);
+    }
+
+    /// <summary>
+    /// Checks GitHub Releases for a newer version. On success, offers to download and
+    /// apply it (the app exits and the helper relaunches). Never throws — a flaky
+    /// network or API hiccup just results in "no update".
+    /// </summary>
+    private async Task CheckForUpdatesAsync(bool silentIfNone)
+    {
+        try
+        {
+            var updater = new UpdateChecker();
+            var result = await updater.CheckAsync();
+
+            if (!result.UpdateAvailable)
+            {
+                if (!silentIfNone)
+                    MessageBox.Show(this, $"You're up to date (v{result.CurrentVersion}).",
+                        "The Council", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var notes = string.IsNullOrWhiteSpace(result.ReleaseNotes)
+                ? "" : $"\n\nWhat's new:\n{Trim(result.ReleaseNotes, 600)}";
+            var prompt = $"Version {result.LatestVersion} is available "
+                       + $"(you have {result.CurrentVersion}).{notes}\n\nUpdate now? "
+                       + "The app will close, update, and reopen.";
+
+            if (MessageBox.Show(this, prompt, "The Council — update available",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes)
+                return;
+
+            statusLabel.Text = "Downloading update…";
+            await updater.DownloadAndApplyAsync(result, requestShutdown: Application.Exit);
+        }
+        catch
+        {
+            if (!silentIfNone)
+                MessageBox.Show(this, "Could not check for updates right now.",
+                    "The Council", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private static string Trim(string s, int max) => s.Length <= max ? s : s[..max] + "…";
 
     private void TryLoadIcon()
     {

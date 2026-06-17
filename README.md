@@ -28,6 +28,8 @@ then the winning proposal's author synthesizes the final agreed solution.
   copy-whole-transcript, and a resizable members panel.
 - **Local & private** — your API keys live only in `%APPDATA%\TheCouncil\settings.json`
   on your machine. No backend, no telemetry.
+- **Auto-update** — checks GitHub Releases on startup and updates itself in place
+  (see [docs/AUTOUPDATE.md](docs/AUTOUPDATE.md)).
 
 ## Install
 

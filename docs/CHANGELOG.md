@@ -4,6 +4,14 @@ All notable changes to The Council are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-06-17
+
+### Added
+- **Auto-update**: on startup the app checks GitHub Releases and offers to download
+  and apply a newer version in place (portable or installer), then relaunches. Uses
+  the GitHub Releases API as the update server — no backend. See
+  [docs/AUTOUPDATE.md](AUTOUPDATE.md).
+
 ## [1.0.0] - 2026-06-17
 
 ### Added
@@ -21,4 +29,5 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Persistent profiles and council roster in `%APPDATA%\TheCouncil\settings.json`.
 - Custom application icon; Enter-to-send / Ctrl+Enter-for-newline input.
 
+[1.0.1]: https://github.com/ilyafainberg/the-council/releases/tag/v1.0.1
 [1.0.0]: https://github.com/ilyafainberg/the-council/releases/tag/v1.0.0
