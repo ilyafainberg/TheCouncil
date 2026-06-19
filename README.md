@@ -6,7 +6,7 @@
 [![Build](https://github.com/ilyafainberg/the-council/actions/workflows/build.yml/badge.svg)](https://github.com/ilyafainberg/the-council/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-![The Council](docs/screenshot.png)
+<img width="1024" height="768" alt="TheCouncil" src="https://github.com/user-attachments/assets/8d244603-92a0-4f56-9427-c4245a8b98ac" />
 
 The Council convenes a panel of AI models (and an optional human seat). You pose a
 problem; each round every participant may **propose** a solution, **vote** for an
