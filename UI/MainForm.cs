@@ -323,8 +323,15 @@ public partial class MainForm : Form
         e.SuppressKeyPress = true;
         if (awaitingHuman)
         {
+            bool hasText = inputTextBox.Text.Trim().Length > 0;
+            if (forceProposalTurn)
+            {
+                // Blind round: must propose. Ignore an empty Enter so the user keeps typing.
+                if (hasText) SubmitHuman(BuildProposal());
+                return;
+            }
             // Typed text proposes; empty submits a vote (if one is selectable) or abstains.
-            if (inputTextBox.Text.Trim().Length > 0) SubmitHuman(BuildProposal());
+            if (hasText) SubmitHuman(BuildProposal());
             else if (submitVoteButton.Enabled) SubmitHuman(BuildVote());
             else SubmitHuman(BuildAbstain());
         }
@@ -339,30 +346,50 @@ public partial class MainForm : Form
     private void StopButton_Click(object? sender, EventArgs e) => cts?.Cancel();
 
     // ---------------- Human gate ----------------
-    private void OnHumanTurnRequested(int round, IReadOnlyList<ProposalInfo> proposalList)
+    private bool forceProposalTurn;
+
+    private void OnHumanTurnRequested(HumanTurnRequest req)
     {
         awaitingHuman = true;
+        forceProposalTurn = req.ForceProposal;
+
         voteCombo.Items.Clear();
-        foreach (var p in proposalList)
+        foreach (var p in req.Proposals)
             voteCombo.Items.Add(new ComboVote { Id = p.Id, Text = $"{p.Id} — {p.Title}" });
 
         bool hasProposals = voteCombo.Items.Count > 0;
-        voteCombo.Enabled = hasProposals;
-        if (hasProposals) voteCombo.SelectedIndex = 0;
-        submitVoteButton.Enabled = hasProposals;
 
-        humanPromptLabel.Text = hasProposals
-            ? $"Round {round} — type a solution to propose, vote for one, or abstain:"
-            : $"Round {round} — type a solution to propose, or abstain:";
+        if (forceProposalTurn)
+        {
+            // Blind opening round: the human must propose. Hide voting/abstain.
+            voteCombo.Visible = false;
+            submitVoteButton.Visible = false;
+            abstainButton.Visible = false;
+            humanPromptLabel.Text = $"Round {req.Round} (blind) — type your own solution and press Enter to propose:";
+            inputTextBox.PlaceholderText = "Type your solution… everyone proposes before seeing each other (Enter to send)";
+        }
+        else
+        {
+            voteCombo.Visible = true;
+            submitVoteButton.Visible = true;
+            abstainButton.Visible = true;
+            voteCombo.Enabled = hasProposals;
+            if (hasProposals) voteCombo.SelectedIndex = 0;
+            submitVoteButton.Enabled = hasProposals;
+            humanPromptLabel.Text = hasProposals
+                ? $"Round {req.Round} — type a solution to propose, vote for one, or abstain:"
+                : $"Round {req.Round} — type a solution to propose, or abstain:";
+            inputTextBox.PlaceholderText = "Type a solution to propose it… (Enter to send, Ctrl+Enter for a new line)";
+        }
 
         humanTurnPanel.Visible = true;
-        inputTextBox.PlaceholderText = "Type a solution to propose it… (Enter to send, Ctrl+Enter for a new line)";
         inputTextBox.Focus();
     }
 
     private void OnHumanTurnEnded()
     {
         awaitingHuman = false;
+        forceProposalTurn = false;
         humanTurnPanel.Visible = false;
     }
 

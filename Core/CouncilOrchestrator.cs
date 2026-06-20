@@ -20,6 +20,12 @@ namespace TheCouncil.Core;
 public record ProposalInfo(string Id, string Title);
 
 /// <summary>
+/// What the UI is asked to collect for the human's gated turn: the round number, the
+/// proposals available to vote for, and whether the human MUST propose (round 1, blind).
+/// </summary>
+public record HumanTurnRequest(int Round, IReadOnlyList<ProposalInfo> Proposals, bool ForceProposal);
+
+/// <summary>
 /// The human's single action for a round: either propose a solution (non-empty <see cref="ProposalText"/>),
 /// vote for an existing proposal (<see cref="VoteProposalId"/>), or abstain.
 /// </summary>
@@ -53,7 +59,7 @@ public class CouncilOrchestrator
 
     public event Action<ChatMessage>? MessageAdded;
     public event Action<string>? StatusChanged;
-    public event Action<int, IReadOnlyList<ProposalInfo>>? HumanTurnRequested;
+    public event Action<HumanTurnRequest>? HumanTurnRequested;
     public event Action? HumanTurnEnded;
     public event Action? Finished;
 
@@ -94,17 +100,26 @@ public class CouncilOrchestrator
             while (round < maxRounds && !ct.IsCancellationRequested)
             {
                 round++;
-                Status($"Round {round} — open debate (max {maxRounds})");
+                bool blindRound = round == 1;
+                Status(blindRound
+                    ? $"Round 1 — every member proposes blind (max {maxRounds})"
+                    : $"Round {round} — open debate (max {maxRounds})");
+
+                // Round 1 is a BLIND proposal round: the human proposes FIRST (seeing
+                // nothing), then each AI proposes seeing only the problem — never each
+                // other's round-1 proposals. So after round 1, #proposals == #members.
+                if (blindRound && humanPresent)
+                    await HumanGate(human, round, forceProposal: true, ct);
 
                 foreach (var p in ais)
                 {
                     ct.ThrowIfCancellationRequested();
-                    await TakeTurn(p, round, ais, ct);
+                    await TakeTurn(p, round, ais, blind: blindRound, ct);
                     await Task.Delay(300, ct);
                 }
 
-                if (humanPresent)
-                    await HumanGate(human, round, ct);
+                if (!blindRound && humanPresent)
+                    await HumanGate(human, round, forceProposal: false, ct);
 
                 if (AisUnanimous(ais, out winnerId))
                 {
@@ -149,14 +164,19 @@ public class CouncilOrchestrator
 
     // ---- human gating ----
 
-    private async Task HumanGate(Participant human, int round, CancellationToken ct)
+    private async Task HumanGate(Participant human, int round, bool forceProposal, CancellationToken ct)
     {
         humanTurn = new TaskCompletionSource<HumanRoundInput>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var reg = ct.Register(() => humanTurn.TrySetCanceled(ct));
 
-        Status("Your turn — propose a solution, vote for a proposal, or abstain.");
-        var snapshot = proposals.Select(kv => new ProposalInfo(kv.Key, kv.Value.Title ?? kv.Key)).ToList();
-        ui.Post(_ => HumanTurnRequested?.Invoke(round, snapshot), null);
+        Status(forceProposal
+            ? "Your turn — propose your own solution (round 1 is blind: propose before the others)."
+            : "Your turn — propose a solution, vote for a proposal, or abstain.");
+        // In the blind round the human proposes before seeing anyone, so offer no proposals to vote for.
+        var snapshot = forceProposal
+            ? new List<ProposalInfo>()
+            : proposals.Select(kv => new ProposalInfo(kv.Key, kv.Value.Title ?? kv.Key)).ToList();
+        ui.Post(_ => HumanTurnRequested?.Invoke(new HumanTurnRequest(round, snapshot, forceProposal)), null);
 
         HumanRoundInput input;
         try
@@ -185,6 +205,11 @@ public class CouncilOrchestrator
             Add(prop);
             return;
         }
+
+        // The blind round requires a proposal; an empty submission means the human
+        // opted out of proposing this round (nothing recorded).
+        if (forceProposal)
+            return;
 
         // Otherwise the human either votes for an existing proposal or abstains.
         var vote = new ChatMessage { Author = human, Action = TurnAction.Vote, Round = round };
@@ -215,7 +240,7 @@ public class CouncilOrchestrator
 
     // ---- AI turns ----
 
-    private async Task TakeTurn(Participant p, int round, List<Participant> ais, CancellationToken ct)
+    private async Task TakeTurn(Participant p, int round, List<Participant> ais, bool blind, CancellationToken ct)
     {
         Status($"{p.DisplayName} is thinking… (round {round})");
 
@@ -228,9 +253,13 @@ public class CouncilOrchestrator
         }
 
         var provider = ProviderFactory.Create(profile);
-        var phase = Prompts.DebatePhase(round, maxRounds, proposals.Count > 0, CurrentLeader(ais));
+        var phase = blind
+            ? Prompts.BlindProposalPhase
+            : Prompts.DebatePhase(round, maxRounds, proposals.Count > 0, CurrentLeader(ais));
         var system = Prompts.SystemFor(p, council, phase);
-        var user = BuildUserPrompt(ais);
+        // In the blind round the prompt contains ONLY the problem — no other members'
+        // round-1 proposals — so every member proposes independently.
+        var user = blind ? BuildBlindPrompt() : BuildUserPrompt(ais);
 
         string raw;
         try
@@ -244,7 +273,21 @@ public class CouncilOrchestrator
             return;
         }
 
-        Add(ParseTurn(raw, p, round));
+        Add(ParseTurn(raw, p, round, forceProposal: blind));
+    }
+
+    /// <summary>Round-1 prompt: only the problem, so the member proposes blind.</summary>
+    private string BuildBlindPrompt()
+    {
+        var problem = transcript.FirstOrDefault(m => m.Action == TurnAction.Problem)?.Content ?? "";
+        var sb = new StringBuilder();
+        sb.AppendLine("PROBLEM TO SOLVE:");
+        sb.AppendLine(problem);
+        sb.AppendLine();
+        sb.AppendLine("This is the blind opening round. You have NOT seen any other member's ideas.");
+        sb.AppendLine("Propose YOUR OWN original solution. You MUST use action=\"propose\".");
+        sb.AppendLine("Respond with JSON only.");
+        return sb.ToString();
     }
 
     private string BuildUserPrompt(List<Participant> ais)
@@ -276,7 +319,7 @@ public class CouncilOrchestrator
         return sb.ToString();
     }
 
-    private ChatMessage ParseTurn(string raw, Participant p, int round)
+    private ChatMessage ParseTurn(string raw, Participant p, int round, bool forceProposal = false)
     {
         var msg = new ChatMessage { Author = p, Round = round };
         var json = ExtractJson(raw);
@@ -298,6 +341,9 @@ public class CouncilOrchestrator
         }
 
         if (string.IsNullOrWhiteSpace(content)) content = reasoning;
+
+        // Blind opening round: every member must propose, whatever the model returned.
+        if (forceProposal) action = "propose";
 
         switch (action)
         {

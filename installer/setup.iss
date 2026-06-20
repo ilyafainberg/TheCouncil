@@ -21,7 +21,7 @@
 #endif
 
 #define MyAppPublisher "Ilya Fainberg"
-#define MyAppURL "https://github.com/ilyafainberg/the-council"
+#define MyAppURL "https://github.com/ilyafainberg/TheCouncil"
 #define MyAppExeName "TheCouncil.exe"
 
 [Setup]

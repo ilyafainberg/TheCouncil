@@ -44,6 +44,11 @@ Keep it tight and substantive. Never restate the whole transcript. Output JSON o
         "ask a clarifying question if something is genuinely blocking, or vote for an existing proposal you find strongest. " +
         "Prefer proposing/refining early; vote once a strong option exists.";
 
+    public const string BlindProposalPhase =
+        "This is the BLIND opening round. You have NOT seen any other member's ideas, and they have not seen yours. " +
+        "Propose YOUR OWN original, concrete solution to the problem. You MUST use action=\"propose\" — do not vote or " +
+        "ask questions. Make it specific and self-contained.";
+
     /// <summary>
     /// Builds round-aware guidance that pushes the council toward UNANIMOUS agreement: convergence
     /// pressure grows with the round number and once proposals (and a leader) exist.

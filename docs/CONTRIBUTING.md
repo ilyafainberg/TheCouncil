@@ -16,8 +16,8 @@ Thanks for your interest! This is a personal project, but PRs and issues are wel
 Requires the **.NET 10 SDK** (targets `net10.0-windows`; Windows only).
 
 ```powershell
-git clone https://github.com/ilyafainberg/the-council.git
-cd the-council
+git clone https://github.com/ilyafainberg/TheCouncil.git
+cd TheCouncil
 dotnet build -c Release
 dotnet run --project TheCouncil.csproj
 ```

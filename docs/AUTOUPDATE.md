@@ -1,6 +1,6 @@
 # Auto-update (Option A — GitHub Releases as the update server)
 
-The Council checks its own [GitHub Releases](https://github.com/ilyafainberg/the-council/releases)
+The Council checks its own [GitHub Releases](https://github.com/ilyafainberg/TheCouncil/releases)
 for a newer version, downloads the right asset, and swaps itself in place. No
 backend, no third-party packages — just the public GitHub API.
 
@@ -15,7 +15,7 @@ backend, no third-party packages — just the public GitHub API.
 App startup (MainForm.Shown)
         │
         ▼
-GET api.github.com/repos/ilyafainberg/the-council/releases/latest
+GET api.github.com/repos/ilyafainberg/TheCouncil/releases/latest
         │   compare tag (v1.3.0 -> 1.3.0) vs this build's Version
         ▼
    newer? ──no──► do nothing (silent)
