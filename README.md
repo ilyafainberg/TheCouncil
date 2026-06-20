@@ -2,8 +2,8 @@
 
 > A Teams-style desktop chat where multiple LLMs — **Gemini, Grok, OpenAI, Azure AI, Claude** — and *you* debate a problem across rounds and converge on one agreed solution.
 
-[![Release](https://img.shields.io/github/v/release/ilyafainberg/the-council)](https://github.com/ilyafainberg/the-council/releases)
-[![Build](https://github.com/ilyafainberg/the-council/actions/workflows/build.yml/badge.svg)](https://github.com/ilyafainberg/the-council/actions)
+[![Release](https://img.shields.io/github/v/release/ilyafainberg/TheCouncil)](https://github.com/ilyafainberg/TheCouncil/releases)
+[![Build](https://github.com/ilyafainberg/TheCouncil/actions/workflows/build.yml/badge.svg)](https://github.com/ilyafainberg/TheCouncil/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 <img width="1024" height="768" alt="TheCouncil" src="https://github.com/user-attachments/assets/8d244603-92a0-4f56-9427-c4245a8b98ac" />
@@ -22,6 +22,9 @@ then the winning proposal's author synthesizes the final agreed solution.
   endpoint + deployment for Azure) and assign them to participants.
 - **Human in the loop** — add yourself as a participant; each round pauses for you
   to propose, vote, or abstain.
+- **Blind opening round** — in round 1 every member proposes from the problem alone,
+  before seeing anyone else's idea, so the debate starts from independent solutions
+  (no anchoring on whoever spoke first).
 - **Consensus engine** — debates run until unanimous (AI-scoped), stalled, or the
   configurable round cap; votes are tallied and a final solution is synthesized.
 - **Teams-style UI** — rounded chat bubbles, avatars, role badges, per-message copy,
@@ -35,7 +38,7 @@ then the winning proposal's author synthesizes the final agreed solution.
 
 ### Option A — Installer (recommended)
 
-1. Go to the [latest release](https://github.com/ilyafainberg/the-council/releases/latest).
+1. Go to the [latest release](https://github.com/ilyafainberg/TheCouncil/releases/latest).
 2. Download **`TheCouncil-<version>-setup.zip`**.
 3. Unzip it and run **`TheCouncil-<version>-setup.exe`**.
 4. Follow the wizard. The app installs to *Program Files* with Start Menu shortcuts.
@@ -45,7 +48,7 @@ then the winning proposal's author synthesizes the final agreed solution.
 
 ### Option B — Portable (no install, no admin)
 
-1. From the [latest release](https://github.com/ilyafainberg/the-council/releases/latest),
+1. From the [latest release](https://github.com/ilyafainberg/TheCouncil/releases/latest),
    download **`TheCouncil-<version>-portable-win-x64.zip`**.
 2. Unzip it anywhere (a USB stick is fine).
 3. Run **`TheCouncil.exe`**. The build is self-contained — no .NET install required.
@@ -95,8 +98,8 @@ grab the conversation.
 Requires the **.NET 10 SDK** (the project targets `net10.0-windows`).
 
 ```powershell
-git clone https://github.com/ilyafainberg/the-council.git
-cd the-council
+git clone https://github.com/ilyafainberg/TheCouncil.git
+cd TheCouncil
 dotnet build -c Release
 dotnet run --project TheCouncil.csproj
 ```

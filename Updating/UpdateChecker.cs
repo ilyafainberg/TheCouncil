@@ -13,7 +13,7 @@
 //  UpdateChecker.cs — self-rolled GitHub Releases auto-updater ("Option A").
 //
 //  Uses the public GitHub Releases API as the update server (no backend):
-//    1. GET /repos/ilyafainberg/the-council/releases/latest
+//    1. GET /repos/ilyafainberg/TheCouncil/releases/latest
 //    2. Compare the release tag (e.g. "v1.3.0") against this app's own version.
 //    3. If newer, pick the asset matching how the app was installed:
 //         - PORTABLE  build -> the *-portable-win-x64.zip (extract over folder)
@@ -74,7 +74,7 @@ public sealed record UpdateCheckResult
 public sealed class UpdateChecker
 {
     private const string Owner = "ilyafainberg";
-    private const string Repo = "the-council";
+    private const string Repo = "TheCouncil";
     private const string AppExeName = "TheCouncil.exe";
 
     // One HttpClient for the whole app. GitHub's API REQUIRES a User-Agent header.
