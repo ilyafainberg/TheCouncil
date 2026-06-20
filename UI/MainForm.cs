@@ -94,7 +94,21 @@ public partial class MainForm : Form
                 return;
 
             statusLabel.Text = "Downloading update…";
-            await updater.DownloadAndApplyAsync(result, requestShutdown: Application.Exit);
+
+            // Show a progress dialog so it's always clear what's happening and when done.
+            using var progressForm = new UpdateProgressForm(result.LatestVersion);
+            progressForm.Show(this);
+            try
+            {
+                await updater.DownloadAndApplyAsync(result, requestShutdown: Application.Exit, progress: progressForm);
+            }
+            catch (Exception ex)
+            {
+                progressForm.Close();
+                MessageBox.Show(this, $"The update could not be applied:\n{ex.Message}",
+                    "The Council", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                statusLabel.Text = "Update failed.";
+            }
         }
         catch
         {

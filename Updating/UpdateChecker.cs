@@ -142,13 +142,21 @@ public sealed class UpdateChecker
         }
     }
 
+    /// <summary>Progress phases reported during <see cref="DownloadAndApplyAsync"/>.</summary>
+    public enum UpdatePhase { Downloading, Preparing, Launching }
+
+    /// <summary>A progress update: the phase, and a 0..1 fraction (-1 if unknown).</summary>
+    public readonly record struct UpdateProgress(UpdatePhase Phase, double Fraction, long BytesReceived, long TotalBytes);
+
     /// <summary>
     /// Downloads the chosen asset to %TEMP% and launches apply-update.cmd, then asks
-    /// the app to exit so the helper can replace files (and relaunch).
+    /// the app to exit so the helper can replace files (and relaunch). Reports
+    /// download/launch progress via <paramref name="progress"/> if supplied.
     /// </summary>
     public async Task DownloadAndApplyAsync(
         UpdateCheckResult result,
         Action requestShutdown,
+        IProgress<UpdateProgress>? progress = null,
         CancellationToken ct = default)
     {
         if (!result.UpdateAvailable || result.AssetDownloadUrl is null || result.AssetName is null)
@@ -161,9 +169,25 @@ public sealed class UpdateChecker
         using (var resp = await Http.GetAsync(result.AssetDownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false))
         {
             resp.EnsureSuccessStatusCode();
+            long total = resp.Content.Headers.ContentLength ?? -1L;
+
+            await using var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
             await using var fs = File.Create(downloadPath);
-            await resp.Content.CopyToAsync(fs, ct).ConfigureAwait(false);
+
+            var buffer = new byte[81920];
+            long received = 0;
+            int read;
+            progress?.Report(new UpdateProgress(UpdatePhase.Downloading, total > 0 ? 0 : -1, 0, total));
+            while ((read = await src.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+            {
+                await fs.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                received += read;
+                double frac = total > 0 ? (double)received / total : -1;
+                progress?.Report(new UpdateProgress(UpdatePhase.Downloading, frac, received, total));
+            }
         }
+
+        progress?.Report(new UpdateProgress(UpdatePhase.Preparing, 1, 0, 0));
 
         var installDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
         var helper = Path.Combine(installDir, "apply-update.cmd");
@@ -188,6 +212,8 @@ public sealed class UpdateChecker
                 Quote(AppExeName)
             })
         };
+
+        progress?.Report(new UpdateProgress(UpdatePhase.Launching, 1, 0, 0));
         Process.Start(psi);
 
         requestShutdown();

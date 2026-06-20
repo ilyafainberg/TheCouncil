@@ -82,6 +82,28 @@ Get-FileHash .\TheCouncil-<version>-setup.zip -Algorithm SHA256
 Use the **copy icon** on any message, or **⧉ Copy transcript** in the header, to
 grab the conversation.
 
+## Command line
+
+The Council also runs headlessly — handy for scripts and pipelines. Configure your
+profiles in the GUI first, then:
+
+```powershell
+# Use the saved roster, print the live debate + final decision:
+TheCouncil "Which database for a small read-heavy app?"
+
+# Pick members explicitly as [profile, name, persona] triples, decision only:
+TheCouncil --problem "Cache strategy?" `
+  --members ["Claude Opus 4.8","Skeptic","contrarian"],["GPT 5.4","Optimist",""] `
+  --quiet
+```
+
+- `profile` matches a saved profile by name (or id); `name` and `persona` are optional.
+- Omit `--members` to reuse the last saved roster.
+- The **final decision** prints to **stdout**; the live debate/log goes to **stderr**
+  (so `--quiet` + stdout redirection gives you just the answer).
+- **CLI mode is AI-only** — any human members are dropped automatically with a warning.
+- Run `TheCouncil --help` for the full option list.
+
 ## Configuration
 
 | Setting | Where | Default | Notes |
