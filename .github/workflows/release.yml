@@ -35,7 +35,7 @@ jobs:
     steps:
       # 1. Check out the exact tagged commit.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # 2. Derive the version from the tag.  v1.0.0 -> 1.0.0 (0.0.0 for manual runs)
       - name: Resolve version
